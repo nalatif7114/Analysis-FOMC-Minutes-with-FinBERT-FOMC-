@@ -89,7 +89,7 @@
     <textarea id="textInput" placeholder="Jika tidak memiliki file, Anda bisa langsung mem-paste teks dokumen di sini..."></textarea>
   </div>
   
-  <button class="btn" onclick="runAnalysis()">🚀 Jalankan FinBERT</button>
+  <button class="btn" onclick="runAnalysis()"> Jalankan FinBERT</button>
 
   <div id="terminalLog">
     <div class="log-line sys">$ sistem siap. menunggu input (file atau teks)...</div>
@@ -148,7 +148,7 @@
     for (let i = 0; i < files.length; i++) {
       let file = files[i];
       uploadedFiles.push(file);
-      fileListDiv.innerHTML += `<div>📄 Mendeteksi: ${file.name}</div>`;
+      fileListDiv.innerHTML += `<div> Mendeteksi: ${file.name}</div>`;
 
       let reader = new FileReader();
       reader.onload = function(evt) {
@@ -222,13 +222,13 @@
 
       const predictionBox = document.getElementById('btcPrediction');
       if (data.bar_type === 'dovish') {
-        predictionBox.textContent = "BULLISH 🚀";
+        predictionBox.textContent = "BULLISH ";
         predictionBox.className = "score-value bullish";
       } else if (data.bar_type === 'hawkish') {
-        predictionBox.textContent = "BEARISH 🩸";
+        predictionBox.textContent = "BEARISH ";
         predictionBox.className = "score-value bearish";
       } else {
-        predictionBox.textContent = "SIDEWAYS ⚖️";
+        predictionBox.textContent = "SIDEWAYS ";
         predictionBox.className = "score-value neutral";
       }
 
