@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FOMC · BTC Sentiment Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #040a0f;
+    --panel: #070d14;
+    --border: #0f2a3f;
+    --accent: #00d4ff;
+    --accent2: #00ff88;
+    --warn: #ff6b35;
+    --danger: #ff2d55;
+    --bull: #00ff88;
+    --bear: #ff2d55;
+    --muted: #2a4a5e;
+    --text: #c8e6f0;
+    --dim: #4a7a8a;
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-ui: 'Rajdhani', sans-serif;
+    --glow: 0 0 20px rgba(0,212,255,0.3);
+    --glow2: 0 0 30px rgba(0,255,136,0.4);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background-color: var(--bg); color: var(--text); font-family: var(--font-ui); padding: 2rem; }
+  .container { max-width: 900px; margin: 0 auto; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 2rem; box-shadow: var(--glow); }
+  h1 { text-align: center; font-size: 2.5rem; color: var(--accent); margin-bottom: 1.5rem; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 2px;}
+  
+  .input-group { margin-bottom: 1.5rem; background: rgba(0,0,0,0.3); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--muted); }
+  label { display: block; font-weight: 600; margin-bottom: 0.8rem; color: var(--accent2); font-size: 1.2rem;}
+  
+  /* Style untuk File Upload */
+  input[type="file"] { display: block; width: 100%; padding: 1rem; background: rgba(0,d4,ff,0.05); border: 1px dashed var(--accent); color: var(--text); font-family: var(--font-mono); cursor: pointer; border-radius: 5px; margin-bottom: 0.5rem; }
+  input[type="file"]:hover { background: rgba(0,d4,ff,0.1); }
+  #fileList { font-family: var(--font-mono); font-size: 0.9rem; color: var(--dim); margin-bottom: 1rem; }
+  
+  .divider { text-align: center; margin: 1rem 0; font-family: var(--font-mono); color: var(--dim); letter-spacing: 2px; }
+
+  textarea { width: 100%; height: 120px; background: rgba(0,0,0,0.5); border: 1px solid var(--border); color: var(--accent); padding: 1rem; font-family: var(--font-mono); border-radius: 5px; resize: vertical;}
+  textarea:focus { outline: none; border-color: var(--accent); box-shadow: var(--glow); }
+  
+  .btn { display: block; width: 100%; background: var(--border); color: var(--accent); border: 1px solid var(--accent); padding: 1rem; font-size: 1.5rem; font-family: var(--font-mono); cursor: pointer; border-radius: 5px; transition: 0.3s; text-transform: uppercase; letter-spacing: 2px;}
+  .btn:hover { background: var(--accent); color: var(--bg); box-shadow: var(--glow); }
+  
+  #resultSection { display: none; margin-top: 2rem; border-top: 1px dashed var(--border); padding-top: 2rem; }
+  #resultSection.active { display: block; animation: fadeIn 0.5s ease-in; }
+  
+  .score-board { display: flex; justify-content: space-between; margin-bottom: 1.5rem; }
+  .score-card { background: rgba(0,0,0,0.5); border: 1px solid var(--border); padding: 1.5rem; width: 48%; text-align: center; border-radius: 5px; }
+  .score-title { font-size: 1.2rem; color: var(--dim); margin-bottom: 0.5rem; }
+  .score-value { font-size: 3rem; font-family: var(--font-mono); font-weight: bold; }
+  
+  .score-value.bullish { color: var(--bull); text-shadow: var(--glow2); }
+  .score-value.bearish { color: var(--bear); text-shadow: 0 0 20px rgba(255,45,85,0.4); }
+  .score-value.neutral { color: var(--warn); }
+  
+  .analysis-box { background: rgba(0,0,0,0.5); border-left: 4px solid var(--accent); padding: 1.5rem; margin-bottom: 1.5rem; font-size: 1.1rem; line-height: 1.6; }
+  
+  .bar-container { width: 100%; height: 20px; background: var(--border); border-radius: 10px; overflow: hidden; margin-top: 1rem; }
+  .score-bar-fill { height: 100%; width: 50%; transition: width 1s ease-in-out; }
+  .score-bar-fill.dovish { background: var(--bull); box-shadow: var(--glow2); }
+  .score-bar-fill.hawkish { background: var(--bear); box-shadow: 0 0 20px rgba(255,45,85,0.4); }
+  .score-bar-fill.neutral { background: var(--warn); }
+
+  #terminalLog { margin-top: 2rem; padding: 1rem; background: #000; border: 1px solid var(--border); font-family: var(--font-mono); font-size: 0.9rem; color: var(--dim); height: 120px; overflow-y: auto; }
+  .log-line.error { color: var(--danger); }
+  .log-line.success { color: var(--bull); }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🏦 FOMC AI Analyzer</h1>
+  
+  <div class="input-group">
+    <label>1. Opsi A: Upload Dokumen The Fed (.htm / .html)</label>
+    <input type="file" id="fileInput" accept=".htm,.html" multiple>
+    <div id="fileList">Belum ada file yang dipilih.</div>
+    
+    <div class="divider">--- ATAU ---</div>
+    
+    <label>2. Opsi B: Paste Teks Manual</label>
+    <textarea id="textInput" placeholder="Jika tidak memiliki file, Anda bisa langsung mem-paste teks dokumen di sini..."></textarea>
+  </div>
+  
+  <button class="btn" onclick="runAnalysis()">🚀 Jalankan FinBERT</button>
+
+  <div id="terminalLog">
+    <div class="log-line sys">$ sistem siap. menunggu input (file atau teks)...</div>
+  </div>
+
+  <div id="resultSection">
+    <div class="score-board">
+      <div class="score-card">
+        <div class="score-title">Net Sentiment Score</div>
+        <div class="score-value" id="netScore">0.00</div>
+      </div>
+      <div class="score-card">
+        <div class="score-title">Prediksi Pasar Kripto</div>
+        <div class="score-value" id="btcPrediction">N/A</div>
+      </div>
+    </div>
+
+    <div class="bar-container">
+      <div id="scoreBarFill" class="score-bar-fill neutral"></div>
+    </div>
+
+    <div class="analysis-box" style="margin-top: 2rem;">
+      <strong style="color: var(--accent);">🔍 Analisis Dampak Ekonomi AI:</strong> <br><br>
+      <span id="analysisText">Menunggu hasil...</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  let uploadedFiles = [];
+  let fileContents = {};
+
+  // Fungsi untuk mencatat log ke terminal web
+  function logMsg(msg, type = 'sys') {
+    const log = document.getElementById('terminalLog');
+    const div = document.createElement('div');
+    div.className = `log-line ${type}`;
+    div.textContent = `> ${msg}`;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // Event Listener saat user memilih file HTML
+  document.getElementById('fileInput').addEventListener('change', function(e) {
+    const files = e.target.files;
+    const fileListDiv = document.getElementById('fileList');
+    fileListDiv.innerHTML = '';
+    uploadedFiles = [];
+    fileContents = {};
+
+    if (files.length === 0) {
+      fileListDiv.innerHTML = 'Belum ada file yang dipilih.';
+      return;
+    }
+
+    for (let i = 0; i < files.length; i++) {
+      let file = files[i];
+      uploadedFiles.push(file);
+      fileListDiv.innerHTML += `<div>📄 Mendeteksi: ${file.name}</div>`;
+
+      let reader = new FileReader();
+      reader.onload = function(evt) {
+        // Ekstrak teks murni dari file HTML
+        let parser = new DOMParser();
+        let doc = parser.parseFromString(evt.target.result, 'text/html');
+        // Mencari isi utama dokumen The Fed
+        let mainDiv = doc.getElementById('article') || doc.getElementById('content') || doc.body;
+        let text = mainDiv ? mainDiv.innerText || mainDiv.textContent : "";
+        
+        fileContents[file.name] = text.trim();
+        logMsg(`[OK] Teks berhasil diekstrak dari ${file.name}`, 'sys');
+      };
+      reader.readAsText(file);
+    }
+  });
+
+  // Fungsi Utama Eksekusi Analisis
+  async function runAnalysis() {
+    let text_payload = "";
+
+    // Logika Penentuan Sumber Teks (Prioritas: File -> Textbox)
+    if (uploadedFiles.length > 0) {
+      // Menggabungkan semua teks dari file yang diupload
+      text_payload = Object.values(fileContents).join("\n\n");
+      logMsg(`Memproses dokumen dari ${uploadedFiles.length} file HTML...`, "sys");
+    } else {
+      // Jika tidak ada file, ambil teks dari kotak text input
+      text_payload = document.getElementById('textInput').value.trim();
+      logMsg("Memproses teks dari input manual...", "sys");
+    }
+
+    // Validasi Kosong
+    if (!text_payload) {
+      logMsg("[ERROR] Teks tidak boleh kosong! Silakan upload file atau paste teks.", "error");
+      alert("Input kosong! Silakan upload file HTML atau paste teks.");
+      return;
+    }
+
+    logMsg("Mengirim data ke server FinBERT Python (Port 5001)...", "sys");
+    document.getElementById('resultSection').classList.remove('active');
+
+    try {
+      const response = await fetch('http://127.0.0.1:5001/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text_payload })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      logMsg("✅ Respon diterima. AI selesai menghitung sentimen.", "success");
+
+      // Menampilkan Hasil ke UI
+      const netSign = data.net_sentiment > 0 ? '+' : '';
+      document.getElementById('netScore').textContent = netSign + data.net_sentiment.toFixed(3);
+      
+      const fill = document.getElementById('scoreBarFill');
+      fill.className = `score-bar-fill ${data.bar_type}`;
+      setTimeout(() => { fill.style.width = data.bar_pct + '%'; }, 100);
+
+      document.getElementById('analysisText').textContent = data.summary + ' ' + data.btc_reasoning;
+
+      const predictionBox = document.getElementById('btcPrediction');
+      if (data.bar_type === 'dovish') {
+        predictionBox.textContent = "BULLISH 🚀";
+        predictionBox.className = "score-value bullish";
+      } else if (data.bar_type === 'hawkish') {
+        predictionBox.textContent = "BEARISH 🩸";
+        predictionBox.className = "score-value bearish";
+      } else {
+        predictionBox.textContent = "SIDEWAYS ⚖️";
+        predictionBox.className = "score-value neutral";
+      }
+
+      document.getElementById('resultSection').classList.add('active');
+
+    } catch (err) {
+      logMsg(`[ERROR] Gagal menghubungi server: ${err.message}`, "error");
+      alert("Error: Pastikan Jupyter Notebook server Python (Port 5001) sedang berjalan!");
+    }
+  }
+</script>
+
+</body>
+</html>
